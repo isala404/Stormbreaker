@@ -11,47 +11,36 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        target:
-          - x86_64-unknown-linux-gnu    # x86 Linux
-          - aarch64-unknown-linux-gnu   # ARM64 Linux (M1 compatible)
+        platform:
+          - os-name: Linux-x86_64
+            target: x86_64-unknown-linux-gnu
+          - os-name: MacOS-arm64
+            target: aarch64-apple-darwin
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Rust
-        uses: actions-rs/toolchain@v1
+      - name: Build binary
+        uses: houseabsolute/actions-rust-cross@v1
         with:
-          toolchain: stable
-          profile: minimal
-          override: true
-          target: ${{ matrix.target }}
-
-      - name: Install cross
-        uses: actions-rs/cargo@v1
-        with:
-          command: install
-          args: cross --force
-
-      - name: Build
-        uses: actions-rs/cargo@v1
-        with:
-          use-cross: true
           command: build
-          args: --release --target ${{ matrix.target }}
+          target: ${{ matrix.platform.target }}
+          args: "--release"
+          force-use-cross: true
 
       - name: Prepare artifacts
         run: |
           mkdir -p artifacts
-          cp target/${{ matrix.target }}/release/stormbreaker artifacts/stormbreaker-${{ matrix.target }}
+          cp target/${{ matrix.platform.target }}/release/stormbreaker artifacts/stormbreaker-${{ matrix.platform.target }}
           cd artifacts
-          tar -czvf stormbreaker-${{ matrix.target }}.tar.gz stormbreaker-${{ matrix.target }}
-          shasum -a 256 stormbreaker-${{ matrix.target }}.tar.gz > stormbreaker-${{ matrix.target }}.tar.gz.sha256
+          tar -czvf stormbreaker-${{ matrix.platform.target }}.tar.gz stormbreaker-${{ matrix.platform.target }}
+          shasum -a 256 stormbreaker-${{ matrix.platform.target }}.tar.gz > stormbreaker-${{ matrix.platform.target }}.tar.gz.sha256
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: stormbreaker-${{ matrix.target }}
+          name: stormbreaker-${{ matrix.platform.target }}
           path: artifacts/*
 
   create-release:
